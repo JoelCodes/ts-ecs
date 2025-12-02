@@ -1,4 +1,4 @@
-import { makeComponentManager } from "./components.ts";
+import { makeComponentManager } from "./components";
 
 const ENTITY_1 = "ENTITY_1";
 const ENTITY_2 = "ENTITY_2";
