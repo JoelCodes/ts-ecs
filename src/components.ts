@@ -1,3 +1,15 @@
+import { Debug } from '@type-challenges/utils';
+
+type QueryResult<
+  Components extends Record<string, any>,
+  RequiredKeys extends keyof Components,
+  OptionalKeys extends Exclude<keyof Components, RequiredKeys>
+> = Debug<{
+  [K in RequiredKeys]: Components[K]
+} & {
+  [K in OptionalKeys]?: Components[K]
+}>
+
 export type ComponentMethods<Entity, Components extends Record<string, any>> = {
   addComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]):boolean;
   setComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]):[false]|[true, Components[ComponentName]];
@@ -7,15 +19,58 @@ export type ComponentMethods<Entity, Components extends Record<string, any>> = {
   getComponents(entity:Entity):Partial<Components>;
   updateComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, update:(component:Components[ComponentName]) => Components[ComponentName]):[false]|[true, Components[ComponentName], Components[ComponentName]];
   mutateComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, mutator:(component:Components[ComponentName]) => void):[false]|[true, Components[ComponentName]];
-  
-  query<QuerySet extends Partial<Components>>(
-    q:{
-      [K in keyof QuerySet]:
+  query<RequiredKeys extends keyof Components>(query: {
+    required: {
+      [RK in RequiredKeys]:
         | undefined
-        | ((component:Exclude<QuerySet[K], undefined>) => boolean);
-    }, 
-    exclude?:(keyof Components)[]
-  ):Map<Entity, QuerySet>;
+        | null
+        | ((component:Components[RK]) => boolean)
+    }
+  }):Map<Entity, {[RK in RequiredKeys]:Components[RK]}>;
+  query<
+    RequiredKeys extends keyof Components, 
+    ExcludedKeys extends Exclude<keyof Components, RequiredKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    excluding:ExcludedKeys[],
+  }):Map<Entity, {[RK in RequiredKeys]:Components[RK]}>;
+  query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends Exclude<keyof Components, RequiredKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean);
+    },
+    optional:OptionalKeys[]
+  }):Map<Entity, Debug<
+    & {[RK in RequiredKeys]:Components[RK]}
+    & {[OK in OptionalKeys]?:Components[OK]}
+  >>;
+  query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends Exclude<keyof Components, RequiredKeys>,
+    ExcludedKeys extends Exclude<keyof Components, RequiredKeys | OptionalKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    optional:OptionalKeys[],
+    excluding:ExcludedKeys[],
+  }):Map<Entity, Debug<
+    & {[RK in RequiredKeys]:Components[RK]}
+    & {[OK in OptionalKeys]?:Components[OK]}
+  >>;
 };
 
 export function makeComponentManager<Entity, Components extends Record<string, any>>(components:{[K in keyof Components]:Map<Entity, Components[K]>}):ComponentMethods<Entity, Components>{
@@ -89,41 +144,113 @@ export function makeComponentManager<Entity, Components extends Record<string, a
     return [true, component];
   };
 
-  const query = <QuerySet extends Partial<Components>>(
-    q:{
-      [K in keyof QuerySet]:
+  function query<RequiredKeys extends keyof Components>(query: {
+    required: {
+      [RK in RequiredKeys]:
         | undefined
-        | ((component:Exclude<QuerySet[K], undefined>) => boolean);
-    }, 
-    excludedNames:(keyof Components)[] = []
-  ):Map<Entity, QuerySet> => {
-    const output = new Map<Entity, QuerySet>();
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    optional?:[],
+    excluding?:[],
+  }):Map<Entity, QueryResult<Components, RequiredKeys, never>>;
+
+  function query<
+    RequiredKeys extends keyof Components, 
+    ExcludedKeys extends Exclude<keyof Components, RequiredKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    optional?:[],
+    excluding:ExcludedKeys[],
+  }):Map<Entity, QueryResult<Components, RequiredKeys, never>>;
+
+  function query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends Exclude<keyof Components, RequiredKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean);
+    },
+    optional:OptionalKeys[],
+    excluding?:[]
+  }):Map<Entity, QueryResult<Components, RequiredKeys, OptionalKeys>>;
+  function query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends Exclude<keyof Components, RequiredKeys>,
+    ExcludedKeys extends Exclude<keyof Components, RequiredKeys | OptionalKeys>
+  >(query: {
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    optional:OptionalKeys[],
+    excluding:ExcludedKeys[],
+  }):Map<Entity, QueryResult<Components, RequiredKeys, OptionalKeys>>;
+
+  function query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends keyof Components,
+    ExcludedKeys extends keyof Components
+  >({
+    required,
+    optional = [],
+    excluding = []
+  }:{
+    required: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component:Components[RK]) => boolean)
+    },
+    optional?:OptionalKeys[],
+    excluding?:ExcludedKeys[],
+  }):Map<Entity, Partial<Components>>{
+    const output = new Map<Entity, Partial<Components>>();
     let first = true;
-    for(const [name, componentQuery] of Object.entries(q) as Iterable<[keyof QuerySet, ((component:QuerySet[keyof QuerySet]) => boolean)|undefined]>){
-      const componentMap = components[name as keyof Components];
+    for(const [componentName, componentQuery] of Object.entries(required) as Iterable<[RequiredKeys, undefined |((component:Components[RequiredKeys]) => boolean)]>){
+      const componentMap = components[componentName];
       if(first){
         for(const [entity, component] of componentMap.entries()){
-          if(typeof componentQuery !== 'function' || componentQuery(component as any as QuerySet[keyof QuerySet])){
-            output.set(entity, {[name]:component} as QuerySet);
-          }
+          if(typeof componentQuery !== 'function' || componentQuery(component))
+          output.set(entity, {[componentName as keyof Components]: component} as any as Partial<Components>);
         }
         first = false;
       } else {
-        for(const [entity, querySet] of [...output.entries()]){
-          if(componentMap.has(entity) && (typeof componentQuery !== 'function' || componentQuery(componentMap.get(entity) as any as QuerySet[keyof QuerySet]))){
-            (querySet as any)[name] = componentMap.get(entity)!
-          } else {
-            output.delete(entity);
+        for(const [entity, queryResult] of output.entries()){
+          if(componentMap.has(entity)){
+            const component = componentMap.get(entity)!;
+            if(typeof componentQuery !== 'function' || componentQuery(component)){
+              queryResult[componentName] = component;
+              continue;
+            }
           }
+          output.delete(entity)
         }
       }
     }
-    for(const excludedName of excludedNames){
-      const componentMap = components[excludedName];
+    if(output.size === 0) return output;
+    for(const excludedKey of excluding){
+      const componentMap = components[excludedKey];
       for(const entity of output.keys()){
         if(componentMap.has(entity)){
           output.delete(entity);
         }
+      }
+    }
+    for(const optionalKey of optional){
+      const componentMap = components[optionalKey];
+      for(const [entity, queryResult] of output.entries()){
+        queryResult[optionalKey] = componentMap.get(entity);
       }
     }
     return output;

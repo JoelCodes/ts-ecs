@@ -11,23 +11,28 @@ type TestEntity =
   | typeof ENTITY_4
 
 type Vec2 = [x:number, y:number];
+type TestComponents = {
+  position: Vec2,
+  flagged:boolean,
+  velocity:Vec2,
+}
 describe("Components", () => {
-  const makeComponents = () => ({
+  const makeTestComponentManger = () => makeComponentManager<TestEntity, TestComponents>({
     position:new Map<TestEntity, Vec2>(), 
     flagged:new Map<TestEntity, boolean>(),
-  });
+    velocity:new Map<TestEntity, Vec2>(),
+  })
   describe('Adding', () => {
     it('adds a component', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const vec:Vec2 = [1, 2];
       expect(componentManager.addComponent(ENTITY_1, "position", vec)).toBe(true);
       expect(componentManager.getComponent(ENTITY_1, "position")).toEqual([true, vec]);
       expect(componentManager.getComponents(ENTITY_1)).toEqual({position: vec});
     });
+
     it('does not add when a component exists', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger()
       const vec:Vec2 = [1, 2];
       expect(componentManager.addComponent(ENTITY_1, "position", vec)).toBe(true);
 
@@ -36,10 +41,10 @@ describe("Components", () => {
       expect(componentManager.getComponents(ENTITY_1)).toEqual({position: vec});
     });
   });
+
   describe('Setting', () => {
     it('sets or replaces a value', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const vec1:Vec2 = [1, 2];
       
       expect(componentManager.setComponent(ENTITY_1, "position", vec1)).toEqual([false]);
@@ -52,11 +57,11 @@ describe("Components", () => {
       expect(componentManager.getComponents(ENTITY_1)).toEqual({position:vec2});
     });
   });
+
   describe('Removing', () => {
     it('deletes a component', () => {
-      const components = makeComponents();
+      const componentManager = makeTestComponentManger();
       const vec:Vec2 = [1, 2];
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
       componentManager.setComponent(ENTITY_1, "position", vec);
       expect(componentManager.getComponent(ENTITY_1, 'position')).toEqual([true, vec]);
 
@@ -66,10 +71,10 @@ describe("Components", () => {
 
       expect(componentManager.removeComponent(ENTITY_1, "position")).toEqual([false]);
     });
+
     it('deletes all components for an entity with removeAllComponents', () => {
-      const components = makeComponents();
+      const componentManager = makeTestComponentManger();
       const vec:Vec2 = [1, 2];
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
       componentManager.setComponent(ENTITY_1, "position", vec);
       componentManager.setComponent(ENTITY_1, "flagged", true);
       componentManager.setComponent(ENTITY_2, "flagged", false);
@@ -85,10 +90,10 @@ describe("Components", () => {
       expect(componentManager.getComponents(ENTITY_2)).toEqual({flagged: false});
     });
   });
+
   describe('Updating', () => {
     it('updates a value with an atom', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const vec1:Vec2 = [1, 2];
       componentManager.setComponent(ENTITY_1, "position", vec1);
       
@@ -97,11 +102,10 @@ describe("Components", () => {
       expect(componentManager.updateComponent(ENTITY_1, "position", update)).toEqual([true, vec1, vec2]);
       expect(update).toHaveBeenLastCalledWith(vec1);
       expect(componentManager.getComponent(ENTITY_1, 'position')).toEqual([true, vec2]);
-
     });
+
     it('does nothing if the component is not set.', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const vec1:Vec2 = [1, 2];
       const update = jest.fn(() => vec1);
       expect(componentManager.updateComponent(ENTITY_1, 'position', update)).toEqual([false]);
@@ -109,10 +113,10 @@ describe("Components", () => {
       expect(componentManager.getComponent(ENTITY_1, 'position')).toEqual([false]);
     });
   });
+
   describe('Mutating', () => {
     it('mutates a component', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const vec1:Vec2 = [1, 2];
       componentManager.setComponent(ENTITY_1, "position", vec1);
 
@@ -124,9 +128,9 @@ describe("Components", () => {
       expect(vec1).toEqual([2, 3]);
       expect(componentManager.getComponent(ENTITY_1, "position")).toEqual([true, [2, 3]]);
     });
+
     it('does nothing if the component is not set', () => {
-      const components = makeComponents();
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(components);
+      const componentManager = makeTestComponentManger();
       const mutate = jest.fn((v:Vec2) => {
         v[0] += 1;
         v[1] += 1;
@@ -135,64 +139,82 @@ describe("Components", () => {
       expect(mutate).not.toHaveBeenCalled();
     });
   });
+
   describe('Querying', () => {
-    it('allows querying for entities based on presence of components', () => {
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(makeComponents());
-      const vec1:Vec2 = [1, 2];
-      const vec2:Vec2 = [2, 3];
-      componentManager.addComponent(ENTITY_1, "position", vec1);
-      componentManager.addComponent(ENTITY_2, "position", vec2);
-      componentManager.addComponent(ENTITY_2, "flagged", true)
-      const results = componentManager.query({"position":undefined});
-      
-      expect(Object.fromEntries(results.entries())).toEqual({
-        [ENTITY_1]: { position: vec1 },
-        [ENTITY_2]: { position: vec2 }
-      });
-      
-      const secondResults = componentManager.query({"position": undefined, flagged: undefined});
-      expect(Object.fromEntries(secondResults.entries())).toEqual({
-        [ENTITY_2]: {position: vec2, flagged: true}
-      });
-    });
-    it('allows querying for entities based on predicate functions', () => {
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(makeComponents());
-      const vec1:Vec2 = [1, 2];
-      const vec2:Vec2 = [2, 3];
-      componentManager.addComponent(ENTITY_1, "position", vec1);
-      componentManager.addComponent(ENTITY_2, "position", vec2);
-      componentManager.addComponent(ENTITY_2, "flagged", true)
-      const vecAlwaysTrue = componentManager.query({"position":() => true});
-      
-      expect(Object.fromEntries(vecAlwaysTrue.entries())).toEqual({
-        [ENTITY_1]: { position: vec1 },
-        [ENTITY_2]: { position: vec2 }
-      });
+    it('returns entities with components in the required', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
+      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
+      componentManager.addComponent(ENTITY_3, 'flagged', false);
 
-      const vecXIs2 = componentManager.query({"position":([x]) => x === 2});
-      expect(Object.fromEntries(vecXIs2.entries())).toEqual({
-        [ENTITY_2]: { position: vec2 }
-      });
-      const vecXIs2AndHasFlagged = componentManager.query({"position":([x]) => x === 2, "flagged": undefined});
-      expect(Object.fromEntries(vecXIs2AndHasFlagged.entries())).toEqual({
-        [ENTITY_2]:{
-          "position": vec2,
-          "flagged": true
-        }
-      });
-    });
-    it('allows querying with negative list', () => {
-      const componentManager = makeComponentManager<TestEntity, {position:Vec2, flagged:boolean}>(makeComponents());
-      const vec1:Vec2 = [1, 2];
-      const vec2:Vec2 = [2, 3];
-      componentManager.addComponent(ENTITY_1, "position", vec1);
-      componentManager.addComponent(ENTITY_2, "position", vec2);
-      componentManager.addComponent(ENTITY_2, "flagged", true);
+      const hasPositionQuery = {position: undefined} as const;
+      expect(componentManager.query({required: hasPositionQuery})).toEqual(new Map([
+        [ENTITY_1, {position: [1, 2]}],
+        [ENTITY_2, {position: [2, 3]}],
+      ]));
 
-      const results = componentManager.query({"position": undefined}, ["flagged"])
-      expect(Object.fromEntries(results.entries())).toEqual({
-        [ENTITY_1]:{"position": vec1}
-      });
+      const hasFlaggedQuery = {flagged: undefined} as const;      
+      expect(componentManager.query({required: hasFlaggedQuery})).toEqual(new Map([
+        [ENTITY_1, {flagged: true}],
+        [ENTITY_3, {flagged: false}],
+      ]));
+
+      const hasFlaggedAndPositionQuery = {position: undefined, flagged: undefined};
+      expect(componentManager.query({required: hasFlaggedAndPositionQuery})).toEqual(new Map([
+        [ENTITY_1, {position: [1, 2], flagged: true}]
+      ]));
+    });
+    it('returns entities with components that pass the tester functions', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
+      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
+      componentManager.addComponent(ENTITY_2, 'flagged', false);
+
+      const manhattanOver4 = {position:([x, y]:Vec2) => x + y >= 4}
+      expect(componentManager.query({required: manhattanOver4})).toEqual(new Map([
+        [ENTITY_2, {position: [2, 3]}]
+      ]));
+
+      expect(componentManager.query({
+        required: {
+          ...manhattanOver4,
+          flagged: undefined
+        },
+      })).toEqual(new Map([
+        [ENTITY_2, {position: [2, 3], flagged: false}]
+      ]));
+    });
+    it('rejects entities with excluded components', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
+      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
+      expect(componentManager.query({required:{position: undefined}, excluding: ['flagged']})).toEqual(new Map([
+        [ENTITY_2, {position: [2, 3]}]
+      ]));
+    });
+    it('gathers optional components', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
+      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
+      expect(componentManager.query({
+        required: {position: undefined},
+        optional: ['flagged', 'velocity']
+      })).toEqual(new Map([
+        [ENTITY_1, {position: [1, 2], flagged: true, velocity: undefined}],
+        [ENTITY_2, {position: [2, 3], flagged: undefined, velocity: undefined}]
+      ]));
+    });
+    it('returns empty if the required is empty', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
+      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
+      componentManager.addComponent(ENTITY_2, 'flagged', false);
+      expect(componentManager.query({required: {}})).toEqual(new Map())
     });
   });
 });
