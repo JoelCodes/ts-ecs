@@ -143,7 +143,7 @@ describe('makeWorldBuilder', () => {
       }
 
       expect([...world.allEntities()]).toEqual([ENTITY_2]);
-      expect([...world.query({ position: undefined}).entries()]).toEqual([[ENTITY_2, {position: [2, 3]}]])
+      expect([...world.query({ required: { position: undefined } }).entries()]).toEqual([[ENTITY_2, {position: [2, 3]}]])
     });
 
     it('removes all entities and components', () => {
@@ -161,7 +161,7 @@ describe('makeWorldBuilder', () => {
       }
 
       expect([...world.allEntities()]).toEqual([])
-      expect([...world.query({}).entries()]).toEqual([]);
+      expect([...world.query({required:{position: null}}).entries()]).toEqual([]);
     });
   });
 });

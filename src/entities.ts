@@ -1,13 +1,4 @@
-export type EntityMethods<Entity> = {
-  createEntity():Entity;
-  createChildEntity(parent:Entity):Entity|undefined;
-  hasEntity(entity:Entity):boolean;
-  allEntities():Iterable<Entity>;
-  getChildren(entity:Entity):Iterable<Entity>;
-  getParent(entity:Entity):Entity|undefined;
-  removeEntity(entity:Entity):Iterable<Entity>;
-  removeAllEntities():Iterable<Entity>;
-}
+import { EntityMethods } from "./entities.types";
 
 export function makeEntityManager<Entity>(makeEntity:() => Entity):EntityMethods<Entity>{
   const entities = new Set<Entity>();

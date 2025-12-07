@@ -1,9 +1,4 @@
-export type SystemMethods<World> = {
-  addSystem(stage:string, handler:(world:World) => void):() => void;
-  orderSystem(stage:string, stages:string[]):() => void;
-  runSystem(stage:string):void;
-  hasStage(stage:string):boolean;
-}
+import { SystemMethods } from "./systems.types";
 
 export function wrapSystems<World>(world:World):SystemMethods<World>{
   const systemsMap = new Map<string, Set<(world:World) => void>>();
@@ -22,21 +17,24 @@ export function wrapSystems<World>(world:World):SystemMethods<World>{
     }
   };
   
-  const runSystem = (stage:string) => {
-      for(const handler of systemsMap.get(stage) ?? []){
-        handler(world);
-      }
+  const runStage = (stage:string) => {
+    for(const handler of systemsMap.get(stage) ?? []){
+      handler(world);
     }
+  }
+
+
+
   return {
     addSystem,
-    orderSystem(stage, stages) {
+    combineStages(stage, stages) {
       return addSystem(stage, () => {
         for(const stage of stages){
-          runSystem(stage);
+          runStage(stage);
         }
       })
     },
-    runSystem,
+    runStage,
     hasStage(stage){
       return systemsMap.has(stage);
     }

@@ -1,77 +1,4 @@
-import { Debug } from '@type-challenges/utils';
-
-type QueryResult<
-  Components extends Record<string, any>,
-  RequiredKeys extends keyof Components,
-  OptionalKeys extends Exclude<keyof Components, RequiredKeys>
-> = Debug<{
-  [K in RequiredKeys]: Components[K]
-} & {
-  [K in OptionalKeys]?: Components[K]
-}>
-
-export type ComponentMethods<Entity, Components extends Record<string, any>> = {
-  addComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]):boolean;
-  setComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]):[false]|[true, Components[ComponentName]];
-  removeComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName):[false]|[true, Components[ComponentName]];
-  removeAllComponents(entity:Entity):Partial<Components>;
-  getComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName):[false]|[true, Components[ComponentName]];
-  getComponents(entity:Entity):Partial<Components>;
-  updateComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, update:(component:Components[ComponentName]) => Components[ComponentName]):[false]|[true, Components[ComponentName], Components[ComponentName]];
-  mutateComponent<ComponentName extends keyof Components>(entity:Entity, name:ComponentName, mutator:(component:Components[ComponentName]) => void):[false]|[true, Components[ComponentName]];
-  query<RequiredKeys extends keyof Components>(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    }
-  }):Map<Entity, {[RK in RequiredKeys]:Components[RK]}>;
-  query<
-    RequiredKeys extends keyof Components, 
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    excluding:ExcludedKeys[],
-  }):Map<Entity, {[RK in RequiredKeys]:Components[RK]}>;
-  query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean);
-    },
-    optional:OptionalKeys[]
-  }):Map<Entity, Debug<
-    & {[RK in RequiredKeys]:Components[RK]}
-    & {[OK in OptionalKeys]?:Components[OK]}
-  >>;
-  query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>,
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys | OptionalKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    optional:OptionalKeys[],
-    excluding:ExcludedKeys[],
-  }):Map<Entity, Debug<
-    & {[RK in RequiredKeys]:Components[RK]}
-    & {[OK in OptionalKeys]?:Components[OK]}
-  >>;
-};
+import { ComponentMethods } from './components.types';
 
 export function makeComponentManager<Entity, Components extends Record<string, any>>(components:{[K in keyof Components]:Map<Entity, Components[K]>}):ComponentMethods<Entity, Components>{
   const addComponent = <ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]): boolean => {
@@ -136,7 +63,13 @@ export function makeComponentManager<Entity, Components extends Record<string, a
     return [true, oldComponent, newComponent];
   };
 
-  const mutateComponent = <ComponentName extends keyof Components>(entity:Entity, name:ComponentName, mutator:(component:Components[ComponentName]) => void):[false]|[true, Components[ComponentName]] => {
+  const mutateComponent = <
+    ComponentName extends keyof Components
+  >(
+    entity:Entity, 
+    name:ComponentName, 
+    mutator:(component:Components[ComponentName]) => void
+  ):[false]|[true, Components[ComponentName]] => {
     const componentMap = components[name];
     if(!componentMap.has(entity)) return [false];
     const component = componentMap.get(entity)!;
@@ -144,78 +77,20 @@ export function makeComponentManager<Entity, Components extends Record<string, a
     return [true, component];
   };
 
-  function query<RequiredKeys extends keyof Components>(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    optional?:[],
-    excluding?:[],
-  }):Map<Entity, QueryResult<Components, RequiredKeys, never>>;
-
-  function query<
-    RequiredKeys extends keyof Components, 
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    optional?:[],
-    excluding:ExcludedKeys[],
-  }):Map<Entity, QueryResult<Components, RequiredKeys, never>>;
-
-  function query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean);
-    },
-    optional:OptionalKeys[],
-    excluding?:[]
-  }):Map<Entity, QueryResult<Components, RequiredKeys, OptionalKeys>>;
-  function query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>,
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys | OptionalKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    optional:OptionalKeys[],
-    excluding:ExcludedKeys[],
-  }):Map<Entity, QueryResult<Components, RequiredKeys, OptionalKeys>>;
-
-  function query<
+  const _queryWithRequired = <
     RequiredKeys extends keyof Components,
     OptionalKeys extends keyof Components,
     ExcludedKeys extends keyof Components
-  >({
-    required,
-    optional = [],
-    excluding = []
-  }:{
-    required: {
+  >(required:  {
       [RK in RequiredKeys]:
         | undefined
         | null
         | ((component:Components[RK]) => boolean)
-    },
-    optional?:OptionalKeys[],
-    excluding?:ExcludedKeys[],
-  }):Map<Entity, Partial<Components>>{
-    const output = new Map<Entity, Partial<Components>>();
+    }, 
+    optional:OptionalKeys[] = [],
+    excluded:ExcludedKeys[] = [],
+  ):Map<Entity, any> => {
+    const output = new Map<Entity, any>();
     let first = true;
     for(const [componentName, componentQuery] of Object.entries(required) as Iterable<[RequiredKeys, undefined |((component:Components[RequiredKeys]) => boolean)]>){
       const componentMap = components[componentName];
@@ -230,7 +105,7 @@ export function makeComponentManager<Entity, Components extends Record<string, a
           if(componentMap.has(entity)){
             const component = componentMap.get(entity)!;
             if(typeof componentQuery !== 'function' || componentQuery(component)){
-              queryResult[componentName] = component;
+              (queryResult as any)[componentName] = component;
               continue;
             }
           }
@@ -239,7 +114,8 @@ export function makeComponentManager<Entity, Components extends Record<string, a
       }
     }
     if(output.size === 0) return output;
-    for(const excludedKey of excluding){
+
+    for(const excludedKey of excluded ?? []){
       const componentMap = components[excludedKey];
       for(const entity of output.keys()){
         if(componentMap.has(entity)){
@@ -247,15 +123,76 @@ export function makeComponentManager<Entity, Components extends Record<string, a
         }
       }
     }
-    for(const optionalKey of optional){
+
+    for(const optionalKey of optional ?? []){
       const componentMap = components[optionalKey];
       for(const [entity, queryResult] of output.entries()){
-        queryResult[optionalKey] = componentMap.get(entity);
+        (queryResult as any)[optionalKey] = componentMap.get(entity);
       }
     }
+
     return output;
   }
 
+  const _queryWithoutRequired = <
+    OptionalKeys extends keyof Components, 
+    ExcludedKeys extends keyof Components,
+  >(
+    optional:OptionalKeys[] = [],
+    excluded:ExcludedKeys[] = []
+  ):Map<Entity, any> => {
+    const output = new Map<Entity, any>();
+    for(const [componentName, componentMap] of Object.entries(components) as Iterable<[keyof Components, Map<Entity, any>]>){
+      if((optional as (keyof Components)[]).includes(componentName)){
+        for(const [entity, component] of componentMap.entries()){
+          if(output.has(entity)){
+            output.get(entity)![componentName] = component;
+          } else {
+            output.set(entity, {[componentName]: component});
+          }
+        }
+      } else {
+        for(const entity of componentMap.keys()){
+          if(!output.has(entity)){
+            output.set(entity, {});
+          }
+        }
+      }
+    }
+
+    for(const excludedKey of excluded){
+      for(const entity of components[excludedKey].keys()){
+        output.delete(entity);
+      }
+    }
+
+    return output;
+  }
+
+  function query<
+    RequiredKeys extends keyof Components,
+    OptionalKeys extends keyof Components,
+    ExcludedKeys extends keyof Components
+  >({
+    required,
+    optional,
+    excluded
+  }:{
+    required?: {
+      [RK in RequiredKeys]:
+        | undefined
+        | null
+        | ((component: Components[RK]) => boolean)
+    },
+    optional?: OptionalKeys[],
+    excluded?: ExcludedKeys[],
+  } = {}):Map<Entity, any>{
+    if(required){
+      return _queryWithRequired<RequiredKeys, OptionalKeys, ExcludedKeys>(required, optional, excluded);
+    }
+    return _queryWithoutRequired<OptionalKeys, ExcludedKeys>(optional, excluded);
+  }
+  
   const componentMethods:ComponentMethods<Entity, Components> = {
     addComponent,
     getComponent,
