@@ -1,7 +1,7 @@
-import { makeComponentManager } from "./components";
-import { makeEntityManager } from "./entities";
-import { makeResourcesManager } from "./resources";
-import type { World, WorldBuilder } from "./world.types";
+import { makeComponentManager } from "./components.ts";
+import { makeEntityManager } from "./entities.ts";
+import { makeResourcesManager } from "./resources.ts";
+import type { World, WorldBuilder } from "./world.types.ts";
 export type { World, WorldBuilder };
 
 export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<Entity, {}, {}>{

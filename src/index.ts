@@ -1,5 +1,5 @@
-export * from './world';
-export * from './systems';
+export * from './world.ts';
+export * from './systems.ts';
 
-export type * from './world.types'
-export type * from './systems.types';
+export type * from './world.types.ts'
+export type * from './systems.types.ts';
