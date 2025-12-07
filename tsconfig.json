@@ -11,7 +11,7 @@
     "jsx": "react",
     "lib": ["ESNext"],
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
     "noEmit": true,
     "resolveJsonModule": true,
     "rootDir": ".",
