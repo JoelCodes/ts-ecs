@@ -7,8 +7,8 @@ export type World<Entity, Components extends Record<string, any>, Resources exte
   & ComponentMethods<Entity, Components>
   & ResourcesMethods<Resources>
   & {
-    createBundle(bundler:(entity:Entity, world:World<Entity, Components, Resources>) => void):Entity;
-    createChildBundle(parent:Entity, bundler:(child:Entity, parent:Entity, world:World<Entity, Components, Resources>) => void):Entity|undefined;
+    createBundle<ExtraArgs extends any[] = []>(bundler:(entity:Entity, world:World<Entity, Components, Resources>, ...extraArgs:ExtraArgs) => void, ...extraArgs:ExtraArgs):Entity;
+    createChildBundle<ExtraArgs extends any[] = []>(parent:Entity, bundler:(child:Entity, parent:Entity, world:World<Entity, Components, Resources>, ...extraArgs:ExtraArgs) => void, ...args:ExtraArgs):Entity|undefined;
     removeEntity(entity:Entity):Iterable<[Entity, Partial<Components>]>;
     removeAllEntities():Iterable<[Entity, Partial<Components>]>;
   };

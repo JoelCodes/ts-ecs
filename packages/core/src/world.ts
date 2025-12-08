@@ -29,16 +29,16 @@ export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<E
       }
     };
 
-    const createBundle = (bundler:(entity:Entity, world:World<Entity, Components, Resources>) => void) => {
+    const createBundle = <ExtraArgs extends any[] = []>(bundler:(entity:Entity, world:World<Entity, Components, Resources>, ...extraArgs:ExtraArgs) => void, ...extraArgs:ExtraArgs) => {
       const entity = entityManager.createEntity();
-      bundler(entity, world);
+      bundler(entity, world, ...extraArgs);
       return entity;
     };
 
-    const createChildBundle = (parent:Entity, bundler:(child:Entity, parent:Entity, world:World<Entity, Components, Resources>) => void) => {
+    const createChildBundle = <ExtraArgs extends any[] = []>(parent:Entity, bundler:(child:Entity, parent:Entity, world:World<Entity, Components, Resources>, ...extraArgs:ExtraArgs) => void, ...extraArgs:ExtraArgs) => {
       const child = entityManager.createChildEntity(parent);
       if(child){
-        bundler(child, parent, world);
+        bundler(child, parent, world, ...extraArgs);
       }
       return child;
     };
