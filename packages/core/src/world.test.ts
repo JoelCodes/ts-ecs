@@ -54,6 +54,33 @@ describe('makeWorldBuilder', () => {
 
       expect(world.getComponents(ENTITY_1)).toEqual({"position": [1, 2], "flagged": true, createdAt: 1800});
     });
+
+    it('allows adding args to a bundle', () => {
+      const makeEntity = jest.fn<TestEntity, []>().mockReturnValue(ENTITY_1);
+      type Vec2 = [x:number, y:number];
+      
+      const world = makeWorldBuilder(makeEntity)
+        .addResource("time", {current:1800, delta:0})
+        .addComponent<"position", Vec2>("position")
+        .addComponent<"flagged", true>("flagged")
+        .addComponent<"createdAt", number>("createdAt")
+        .world();
+      type TestWorld = typeof world;
+
+      const bundleWithExtraParams = (entity:TestEntity, world:TestWorld, position:Vec2) => {
+        world.addComponent(entity, "position", position);
+        world.addComponent(entity, "flagged", true);
+        world.addComponent(entity, "createdAt", world.getResource("time").current);
+      }
+
+      const created = world.createBundle(bundleWithExtraParams, [1, 2]);
+      expect(created).toBe(ENTITY_1);
+      expect(world.getComponents(created)).toEqual({
+        flagged: true,
+        position: [1, 2],
+        createdAt: 1800
+      })
+    })
     
     it('creates bundles as child entities', () => {
       const makeEntity = jest.fn<TestEntity, []>().mockReturnValue(ENTITY_1);
@@ -72,12 +99,13 @@ describe('makeWorldBuilder', () => {
       });
       
       makeEntity.mockReturnValue(ENTITY_2);
-      expect(world.createChildBundle(ENTITY_1, (child, parent, world) => {
-        world.addComponent(child, "position", [1, 2]);
+      const position:Vec2 = [1, 2];
+      expect(world.createChildBundle(ENTITY_1, (child, parent, world, position) => {
+        world.addComponent(child, "position", position);
         world.addComponent(child, "flagged", true);
         world.addComponent(child, "createdAt", world.getResource("time").current);
         world.updateComponent(parent, "numChildren", n => n + 1);
-      })).toBe(ENTITY_2);
+      }, position)).toBe(ENTITY_2);
       
       const childComponents = world.getComponents(ENTITY_2);
       

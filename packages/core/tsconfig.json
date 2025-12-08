@@ -5,9 +5,7 @@
     "allowImportingTsExtensions": true,
     "allowArbitraryExtensions": true,
     "declaration": true,
-    "declarationDir": "build/types",
     "esModuleInterop": true,
-    "outDir": "./build",
     "jsx": "react",
     "lib": ["ESNext"],
     "module": "esnext",
@@ -20,6 +18,6 @@
     "target": "esnext",
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*", "examples/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["**/node_modules", "**/build", "**/dist", "**/*.md", "**/rollup.config.js"]
 }

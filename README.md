@@ -51,6 +51,7 @@ function setup(world){
   const enemyArrow = world.createChildEntity(enemy)
   world.addComponent(enemyArrow, "position", [0, 0])
   world.addComponent(enemyArrow, "velocity", [1, 0]);
+  world.addComponent(enemyArrow, "isEnemy", true);
 }
 
 const systems = wrapSystems(world);
@@ -92,18 +93,25 @@ const world = makeWorldBuilder(makeId)
   .addComponent<"isEnemy", true>("isEnemy")
   .world();
 
-const enemyBundle = (entity, world) => {
+type OurWorld = typeof world;
+
+// A bundle takes the entity and world as arguments.
+// We can also include extra args
+const enemyBundle = (entity:string, world:OurWorld) => {
   world.addComponent(entity, "position", [0, 0]);
   world.addComponent(entity, "isEnemy", true);
 }
 
-const enemyArrowBundle = (arrow, _enemy, world) => {
-  world.addComponent(arrow, "position", [0, 0])
-  world.addComponent(arrow, "velocity", [1, 0]);
+const enemy = world.createBundle(enemyBundle);
+
+// A child bundle takes the child entity, parent entity, and world. 
+// A bundle may may also take extra arguments, which TypeScript can then infer.
+const enemyArrowBundle = (child:string, parent:string, world:OurWorld, position:Vec2) => {
+  world.addComponent(child, "position", position)
+  world.addComponent(child, "velocity", [1, 0]);
 }
 
-const enemy = world.createBundle(enemyBundle);
-const enemyArrow = world.createChildBundle(enemy, enemyArrowBundle);
+const enemyArrow = world.createChildBundle(enemy, enemyArrowBundle, [0,0]);
 ```
 
 ## Why ECS?
@@ -120,4 +128,8 @@ ECS was developed first as a way of collocating similarly shaped data in memory,
 
 ## What's Next?
 
-> TODO: Talk about future features.
+Future features:
+
+* Object Pools
+* "Flag" components that work as `Set` not `Map`
+* 
