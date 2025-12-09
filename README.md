@@ -40,7 +40,7 @@ world.addComponent(enemyArrow, "position", [0, 0])
 world.addComponent(enemyArrow, "velocity", [1, 0]);
 ```
 
-The last element of ECS is __Systems__, which describe all the ways our app will interact with the Entities, Components, and Resources in our world.  Currently, this system doesn't enforce any particular stages and leaves it to you to decide how and when each system will run. To define a system, you define a function that accepts the worlds as a parameter.
+The last element of ECS is __Systems__, which describe all the ways our app will interact with the Entities, Components, and Resources in our world.  In our library, they're defined as functions that accept the world as a parameter.  Our systems manager allows you to add systems to "stages" (`"setup"` in our example), and when you call `"runStage"`, it runs all the systems at that stage.
 
 ```ts
 function setup(world){
@@ -57,7 +57,7 @@ function setup(world){
 const systems = wrapSystems(world);
 systems.addSystem("setup", setup);
 
-systems.runSystem("setup");
+systems.runStage("setup");
 ```
 
 That's enough to do everything you'd want, but there's some additional vocab I've picked up along the way that I've added to this library.
@@ -109,6 +109,7 @@ const enemy = world.createBundle(enemyBundle);
 const enemyArrowBundle = (child:string, parent:string, world:OurWorld, position:Vec2) => {
   world.addComponent(child, "position", position)
   world.addComponent(child, "velocity", [1, 0]);
+  world.addComponent(child, "isEnemy", true);
 }
 
 const enemyArrow = world.createChildBundle(enemy, enemyArrowBundle, [0,0]);
@@ -130,6 +131,7 @@ ECS was developed first as a way of collocating similarly shaped data in memory,
 
 Future features:
 
-* Object Pools
+* Object Pools & Typed Arrays
 * "Flag" components that work as `Set` not `Map`
-* 
+* Web Workers for parralel systems
+* Events
