@@ -13,14 +13,28 @@ type TestEntity =
 type Vec2 = [x:number, y:number];
 type TestComponents = {
   position: Vec2,
-  flagged:boolean,
   velocity:Vec2,
 }
+type TestFlag = 'flagged' | 'dead'
 describe("Components", () => {
-  const makeTestComponentManger = () => makeComponentManager<TestEntity, TestComponents>({
+  const makeTestComponentManger = () => makeComponentManager<TestEntity, TestComponents, TestFlag>({
     position:new Map<TestEntity, Vec2>(), 
-    flagged:new Map<TestEntity, boolean>(),
     velocity:new Map<TestEntity, Vec2>(),
+  }, {
+    flagged: new Set<TestEntity>(),
+    dead: new Set<TestEntity>()
+  });
+
+  describe("Get Names", () => {
+    it('gets the names of all the components and flags', () => {
+      const componentManager = makeTestComponentManger();
+      
+      const componentNames = [...componentManager.getComponentNames()].sort((a, b) => a.localeCompare(b));
+      expect(componentNames).toEqual(["position", "velocity"]);
+
+      const flagNames = [...componentManager.getFlagNames()].sort((a, b) => a.localeCompare(b));
+      expect(flagNames).toEqual(["dead", "flagged"])
+    })
   })
   describe('Adding', () => {
     it('adds a component', () => {
@@ -40,6 +54,14 @@ describe("Components", () => {
       expect(componentManager.getComponent(ENTITY_1, "position")).toEqual([true, vec]);
       expect(componentManager.getComponents(ENTITY_1)).toEqual({position: vec});
     });
+    
+    it('adds a flag', () => {
+      const componentManager = makeTestComponentManger();
+      expect(componentManager.hasFlag(ENTITY_1, 'flagged')).toBe(false)
+      expect(componentManager.addFlag(ENTITY_1, 'flagged')).toBe(true);
+      expect(componentManager.hasFlag(ENTITY_1, 'flagged')).toBe(true);
+      expect(componentManager.addFlag(ENTITY_1, 'flagged')).toBe(false);
+    })
   });
 
   describe('Setting', () => {
@@ -72,12 +94,24 @@ describe("Components", () => {
       expect(componentManager.removeComponent(ENTITY_1, "position")).toEqual([false]);
     });
 
+    it('removes a flag', () => {
+      const componentManager = makeTestComponentManger();
+      componentManager.addFlag(ENTITY_1, "flagged");
+
+      expect(componentManager.hasFlag(ENTITY_1, "flagged")).toBe(true);
+      expect(componentManager.removeFlag(ENTITY_1, "flagged")).toBe(true);
+      expect(componentManager.hasFlag(ENTITY_1, "flagged")).toBe(false);
+      
+      expect(componentManager.removeFlag(ENTITY_1, "flagged")).toBe(false);
+      expect(componentManager.hasFlag(ENTITY_1, "flagged")).toBe(false);
+    });
+
     it('deletes all components for an entity with removeAllComponents', () => {
       const componentManager = makeTestComponentManger();
       const vec:Vec2 = [1, 2];
       componentManager.setComponent(ENTITY_1, "position", vec);
-      componentManager.setComponent(ENTITY_1, "flagged", true);
-      componentManager.setComponent(ENTITY_2, "flagged", false);
+      componentManager.addFlag(ENTITY_1, "flagged");
+      componentManager.addFlag(ENTITY_2, "flagged");
       
       expect(componentManager.removeAllComponents(ENTITY_1)).toEqual({
         position: vec,
@@ -87,7 +121,7 @@ describe("Components", () => {
       expect(componentManager.getComponents(ENTITY_1)).toEqual({});
       expect(componentManager.removeAllComponents(ENTITY_1)).toEqual({});
 
-      expect(componentManager.getComponents(ENTITY_2)).toEqual({flagged: false});
+      expect(componentManager.getComponents(ENTITY_2)).toEqual({flagged: true});
     });
   });
 
@@ -144,9 +178,9 @@ describe("Components", () => {
     it('returns entities with components in the required', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
-      componentManager.addComponent(ENTITY_3, 'flagged', false);
+      componentManager.addFlag(ENTITY_3, 'flagged');
 
       const hasPositionQuery = {position: undefined} as const;
       expect(componentManager.query({required: hasPositionQuery})).toEqual(new Map([
@@ -157,7 +191,7 @@ describe("Components", () => {
       const hasFlaggedQuery = {flagged: undefined} as const;      
       expect(componentManager.query({required: hasFlaggedQuery})).toEqual(new Map([
         [ENTITY_1, {flagged: true}],
-        [ENTITY_3, {flagged: false}],
+        [ENTITY_3, {flagged: true}],
       ]));
 
       const hasFlaggedAndPositionQuery = {position: undefined, flagged: undefined};
@@ -168,13 +202,15 @@ describe("Components", () => {
     it('returns entities with components that pass the tester functions', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
-      componentManager.addComponent(ENTITY_2, 'flagged', false);
+      componentManager.addFlag(ENTITY_2, 'flagged');
+      componentManager.addComponent(ENTITY_3, 'position', [3, 4]);
 
       const manhattanOver4 = {position:([x, y]:Vec2) => x + y >= 4}
       expect(componentManager.query({required: manhattanOver4})).toEqual(new Map([
-        [ENTITY_2, {position: [2, 3]}]
+        [ENTITY_2, {position: [2, 3]}],
+        [ENTITY_3, {position: [3, 4]}]
       ]));
 
       expect(componentManager.query({
@@ -183,16 +219,16 @@ describe("Components", () => {
           flagged: undefined
         },
       })).toEqual(new Map([
-        [ENTITY_2, {position: [2, 3], flagged: false}]
+        [ENTITY_2, {position: [2, 3], flagged: true}]
       ]));
     });
 
     it('returns all entities if there is no query', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
-      componentManager.addComponent(ENTITY_2, 'flagged', false);
+      componentManager.addFlag(ENTITY_2, 'flagged');
       componentManager.addComponent(ENTITY_3, 'position', [3, 4]);
       expect(componentManager.query({})).toEqual(new Map([
         [ENTITY_1, {}],
@@ -209,7 +245,7 @@ describe("Components", () => {
     it('rejects entities with excluded components', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
       componentManager.addComponent(ENTITY_3, 'velocity', [1, 2]);
       expect(componentManager.query({ excluded: ['flagged'] })).toEqual(new Map([
@@ -224,14 +260,14 @@ describe("Components", () => {
     it('gathers optional components', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
       expect(componentManager.query({
         required: {position: undefined},
         optional: ['flagged', 'velocity']
       })).toEqual(new Map([
-        [ENTITY_1, {position: [1, 2], flagged: true, velocity: undefined}],
-        [ENTITY_2, {position: [2, 3], flagged: undefined, velocity: undefined}]
+        [ENTITY_1, {position: [1, 2], flagged: true}],
+        [ENTITY_2, {position: [2, 3], }]
       ]));
       expect(componentManager.query({
         optional: ['flagged', 'velocity']
@@ -243,23 +279,10 @@ describe("Components", () => {
     it('returns empty if the required is empty', () => {
       const componentManager = makeTestComponentManger();
       componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
+      componentManager.addFlag(ENTITY_1, 'flagged');
       componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
-      componentManager.addComponent(ENTITY_2, 'flagged', false);
+      componentManager.addFlag(ENTITY_2, 'flagged');
       expect(componentManager.query({required: {}})).toEqual(new Map())
-    });
-    it('returns all entities if there is no query', () => {
-      const componentManager = makeTestComponentManger();
-      componentManager.addComponent(ENTITY_1, 'position', [1, 2]);
-      componentManager.addComponent(ENTITY_1, 'flagged', true);
-      componentManager.addComponent(ENTITY_2, 'position', [2, 3]);
-      componentManager.addComponent(ENTITY_2, 'flagged', false);
-      componentManager.addComponent(ENTITY_3, 'position', [3, 4]);
-      expect(componentManager.query({})).toEqual(new Map([
-        [ENTITY_1, {}],
-        [ENTITY_2, {}],
-        [ENTITY_3, {}],
-      ]));
     });
   });
 });

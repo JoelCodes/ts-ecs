@@ -3,6 +3,7 @@ const svg = document.querySelector('#my-app')! as SVGSVGElement;
 
 let index = 0;
 const makeId = () => ++index;
+
 type BallComponent = {
   center:[x:number, y:number],
   timeRemaining: number,
@@ -50,8 +51,12 @@ function updateBalls(world:BallWorld){
   }
 }
 
+const isBallDead = (ball:BallComponent) => ball.timeRemaining <= 0
+
 function cleanup(world:BallWorld){
-  for(const [entity, {ball: {element}}] of world.query({required: {ball: (ball) => ball.timeRemaining <= 0}}).entries()){
+  for(const [entity, {ball: {element}}] of world.query({
+    required: {ball: isBallDead}
+  }).entries()){
     element.remove();
     world.removeEntity(entity)
   }

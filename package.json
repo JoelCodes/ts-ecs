@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "description": "A Little ECS For TypeScript",
   "license": "ISC",
-  "workspaces": ["packages/*"]
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "npm -ws test"
+  }
 }

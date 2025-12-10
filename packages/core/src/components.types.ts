@@ -1,81 +1,36 @@
 import { Debug } from "@type-challenges/utils";
 
-export type ComponentMethods<Entity, Components extends Record<string, any>> = {
+export type ComponentMethods<Entity, Components extends Record<string, any>, Flags extends string> = {
   addComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName, componentData:Components[ComponentName]):boolean;
   setComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName, componentData:Components[ComponentName]):[false]|[true, Components[ComponentName]];
   removeComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName):[false]|[true, Components[ComponentName]];
-  removeAllComponents(entity:Entity):Partial<Components>;
-  getComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName):[false]|[true, Components[ComponentName]];
-  getComponents(entity:Entity):Partial<Components>;
   updateComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName, update:(component:Components[ComponentName]) => Components[ComponentName]):[false]|[true, Components[ComponentName], Components[ComponentName]];
   mutateComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName, mutator:(component:Components[ComponentName]) => void):[false]|[true, Components[ComponentName]];
-  query<ExcludedKeys extends keyof Components>(query?: {
-    excluded?:ExcludedKeys[];
-  }):Map<Entity, {}>;
-  query<OptionalKeys extends keyof Components>(
-    query: {
-      optional: OptionalKeys[];
-    }
-  ):Map<Entity, { [OK in OptionalKeys]?: Components[OK] }>;
+  getComponent<ComponentName extends keyof Components>(entity:Entity, componentName:ComponentName):[false]|[true, Components[ComponentName]];
+  getComponentNames():Iterable<keyof Components>;
+  
+  addFlag<FlagName extends Flags>(entity:Entity, flagName:FlagName):boolean;
+  removeFlag<FlagName extends Flags>(entity:Entity, flagName:FlagName):boolean;
+  hasFlag<FlagName extends Flags>(entity:Entity, flagName:FlagName):boolean;
+  getFlagNames():Iterable<Flags>;
+
+  removeAllComponents(entity:Entity):Partial<Components & Record<Flags, true>>;
+  getComponents(entity:Entity):Partial<Components & Record<Flags, true>>;
+
   query<
-    OptionalKeys extends keyof Components,
-    ExcludedKeys extends Exclude<keyof Components, OptionalKeys>
-  >(
-    query: {
-      optional: OptionalKeys[];
-      excluded: ExcludedKeys[];
-    }
-  ):Map<Entity, { [OK in OptionalKeys]?: Components[OK] }>;
-  query<RequiredKeys extends keyof Components>(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    }
-  }):Map<Entity, { [RK in RequiredKeys]: Components[RK] }>;
-  query<
-    RequiredKeys extends keyof Components, 
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
+    RequiredKeys extends (keyof Components) | Flags = never,
+    OptionalKeys extends Exclude<(keyof Components) | Flags, RequiredKeys> = never,
+    ExcludedKeys extends Exclude<(keyof Components) | Flags, RequiredKeys | OptionalKeys> = never
+  >(q?: {
+    required?: {
+      [RK in RequiredKeys]: RK extends keyof Components ? ((component:Components[RK]) => boolean) | null | undefined : null | undefined
     },
-    excluded:ExcludedKeys[],
-  }):Map<Entity, { [RK in RequiredKeys]: Components[RK] }>;
-  query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean);
-    },
-    optional:OptionalKeys[]
-  }):Map<Entity, Debug<
-    & { [RK in RequiredKeys]: Components[RK] }
-    & { [OK in OptionalKeys]?: Components[OK] }
-  >>;
-  query<
-    RequiredKeys extends keyof Components,
-    OptionalKeys extends Exclude<keyof Components, RequiredKeys>,
-    ExcludedKeys extends Exclude<keyof Components, RequiredKeys | OptionalKeys>
-  >(query: {
-    required: {
-      [RK in RequiredKeys]:
-        | undefined
-        | null
-        | ((component:Components[RK]) => boolean)
-    },
-    optional:OptionalKeys[],
-    excluded:ExcludedKeys[],
-  }):Map<Entity, Debug<
-    & { [RK in RequiredKeys]: Components[RK] }
-    & { [OK in OptionalKeys]?: Components[OK] }
-  >>;
+    optional?: OptionalKeys[],
+    excluded?:ExcludedKeys[],
+  }):Map<Entity,
+    Debug<
+      & {[RK in RequiredKeys]: RK extends keyof Components ? Components[RK] : true}
+      & {[OK in OptionalKeys]?: OK extends keyof Components ? Components[OK] : true}
+    >
+  >;
 };

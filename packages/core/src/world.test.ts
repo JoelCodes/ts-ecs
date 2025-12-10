@@ -18,7 +18,7 @@ describe('makeWorldBuilder', () => {
     const world = makeWorldBuilder(() => ENTITY_1)
       .addResource("time", {current: 1800, delta: 0})
       .addComponent<"position", Vec2>("position")
-      .addComponent<"flagged", true>("flagged")
+      .addFlag("flagged")
       .world();
     
     expect(world.getResource("time")).toEqual({current: 1800, delta: 0});
@@ -27,7 +27,7 @@ describe('makeWorldBuilder', () => {
     expect(entity).toBe(ENTITY_1);
 
     world.addComponent(entity, "position", [1, 2]);
-    world.addComponent(entity, "flagged", true);
+    world.addFlag(entity, "flagged");
     
     expect(world.hasEntity(ENTITY_1)).toBe(true);
     expect(world.hasEntity(ENTITY_2)).toBe(false);
@@ -42,13 +42,13 @@ describe('makeWorldBuilder', () => {
       const world = makeWorldBuilder(makeEntity)
         .addResource("time", {current:1800, delta:0})
         .addComponent<"position", Vec2>("position")
-        .addComponent<"flagged", true>("flagged")
+        .addFlag("flagged")
         .addComponent<"createdAt", number>("createdAt")
         .world();
         
       expect(world.createBundle((entity, world) => {
         world.addComponent(entity, "position", [1, 2]);
-        world.addComponent(entity, "flagged", true);
+        world.addFlag(entity, "flagged");
         world.addComponent(entity, "createdAt", world.getResource("time").current);
       })).toBe(ENTITY_1);
 
@@ -62,14 +62,14 @@ describe('makeWorldBuilder', () => {
       const world = makeWorldBuilder(makeEntity)
         .addResource("time", {current:1800, delta:0})
         .addComponent<"position", Vec2>("position")
-        .addComponent<"flagged", true>("flagged")
+        .addFlag("flagged")
         .addComponent<"createdAt", number>("createdAt")
         .world();
       type TestWorld = typeof world;
 
       const bundleWithExtraParams = (entity:TestEntity, world:TestWorld, position:Vec2) => {
         world.addComponent(entity, "position", position);
-        world.addComponent(entity, "flagged", true);
+        world.addFlag(entity, "flagged");
         world.addComponent(entity, "createdAt", world.getResource("time").current);
       }
 
@@ -90,7 +90,7 @@ describe('makeWorldBuilder', () => {
       .addResource("time", {current:1800, delta:0})
       .addComponent<"createdAt", number>("createdAt")
       .addComponent<"position", Vec2>("position")
-      .addComponent<"flagged", true>("flagged")
+      .addFlag("flagged")
       .addComponent<"numChildren", number>("numChildren")
       .world();
       
@@ -102,7 +102,7 @@ describe('makeWorldBuilder', () => {
       const position:Vec2 = [1, 2];
       expect(world.createChildBundle(ENTITY_1, (child, parent, world, position) => {
         world.addComponent(child, "position", position);
-        world.addComponent(child, "flagged", true);
+        world.addFlag(child, "flagged");
         world.addComponent(child, "createdAt", world.getResource("time").current);
         world.updateComponent(parent, "numChildren", n => n + 1);
       }, position)).toBe(ENTITY_2);
