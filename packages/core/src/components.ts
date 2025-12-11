@@ -6,7 +6,8 @@ export function makeComponentManager<
   Flags extends string
 >(
   components:{[K in keyof Components]:Map<Entity, Components[K]>},
-  flags:{[K in Flags]:Set<Entity>}
+  flags:{[K in Flags]:Set<Entity>},
+  componentCleanups:{[K in keyof Components]?:(component:Components[K], entity:Entity) => void} = {}
 ):ComponentMethods<Entity, Components, Flags>{
   const addComponent = <ComponentName extends keyof Components>(entity:Entity, name:ComponentName, component:Components[ComponentName]): boolean => {
     const componentMap = components[name];
@@ -45,6 +46,7 @@ export function makeComponentManager<
     }
     const component = componentMap.get(entity)!;
     componentMap.delete(entity);
+    componentCleanups[name]?.(component, entity);
     return [true, component];
   };
 
@@ -53,8 +55,10 @@ export function makeComponentManager<
 
     for(const [name, componentMap] of Object.entries(components) as Iterable<[keyof Components, Map<Entity, Components[keyof Components]>]>){
       if(componentMap.has(entity)){
-        output[name] = componentMap.get(entity);
+        const component = componentMap.get(entity)!;
+        output[name] = component;
         componentMap.delete(entity);
+        componentCleanups[name]?.(component, entity);
       }
     }
 

@@ -125,6 +125,37 @@ describe("Components", () => {
     });
   });
 
+  describe('Cleanup', () => {
+    it('runs cleanup command on removeComponent', () => {
+      const cleanup = jest.fn<void, [number, any]>()
+      const componentManager = makeComponentManager({cleanup: new Map<TestEntity, number>()}, {}, {cleanup});
+      componentManager.addComponent(ENTITY_1, "cleanup", 343);
+      expect(cleanup).not.toHaveBeenCalled();
+      componentManager.removeComponent(ENTITY_1, 'cleanup');
+      expect(cleanup).toHaveBeenCalledWith(343, ENTITY_1);
+    });
+    it('runs cleanup command on removeAllComponents', () => {
+      const cleanupNumber = jest.fn<void, [number, any]>();
+      const cleanupString = jest.fn<void, [string, any]>();
+
+      const componentManager = makeComponentManager({
+        cleanupNumber: new Map<TestEntity, number>(),
+        cleanupString: new Map<TestEntity, string>()
+      }, {}, {cleanupNumber, cleanupString});
+
+      componentManager.addComponent(ENTITY_1, "cleanupNumber", 24);
+      componentManager.addComponent(ENTITY_1, "cleanupString", "Hello");
+
+      expect(cleanupNumber).not.toHaveBeenCalled();
+      expect(cleanupString).not.toHaveBeenCalled();
+
+      componentManager.removeAllComponents(ENTITY_1);
+
+      expect(cleanupNumber).toHaveBeenCalledWith(24, ENTITY_1);
+      expect(cleanupString).toHaveBeenCalledWith("Hello", ENTITY_1);
+    });
+  })
+
   describe('Updating', () => {
     it('updates a value with an atom', () => {
       const componentManager = makeTestComponentManger();

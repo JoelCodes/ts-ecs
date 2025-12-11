@@ -15,7 +15,7 @@ export type World<Entity, Components extends Record<string, any>, Resources exte
 
 export type WorldBuilder<Entity, Components extends Record<string, any>, Resources extends Record<string, any>, Flags extends string> = {
   world():World<Entity, Components, Resources, Flags>;
-  addComponent<ComponentName extends string, ComponentType>(name:ComponentName):ComponentName extends Flags | keyof Components ? never :
+  addComponent<ComponentName extends string, ComponentType>(name:ComponentName, cleanup?:(component:ComponentType, entity:Entity) => void):ComponentName extends Flags | keyof Components ? never :
     WorldBuilder<
       Entity, 
       {[K in (keyof Components)|ComponentName]:
