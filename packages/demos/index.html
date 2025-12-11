@@ -5,9 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>demos</title>
+    <style>
+      .ball {
+        r: 25px;
+        fill: red;
+      }
+      #count-text {
+        fill: 'blue';
+        font-size: 100px;
+        text-anchor: middle;
+      }
+    </style>
   </head>
   <body>
-    <svg id="my-app" viewBox="0 0 500 300" style="background-color: #eee;"></svg>
+    <svg id="my-app" viewBox="-250 -150 500 300" style="background-color: #eee;">
+      <g id="ball-group"></g>
+      <text id="count-text">Hello</text>
+    </svg>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -34,6 +34,84 @@ describe('makeWorldBuilder', () => {
     expect(world.getComponents(ENTITY_1)).toEqual({position: [1, 2], flagged: true});
   });
 
+  describe('Cleanup', () => {
+    it('runs component cleanup on removeComponent', () => {
+      const cleanup = jest.fn<void, [number, TestEntity]>();
+      const world = makeWorldBuilder(():TestEntity => ENTITY_1)
+        .addComponent("cleanup", cleanup)
+        .world();
+      
+      const entity = world.createEntity();
+      world.addComponent(entity, "cleanup", 343);
+      expect(cleanup).not.toHaveBeenCalled();
+      world.removeComponent(entity, "cleanup");
+      expect(cleanup).toHaveBeenCalledWith(343, ENTITY_1);
+
+    });
+    it('runs component cleanup on removeAllComponents', () => {
+      const cleanupNumber = jest.fn<void, [number, TestEntity]>();
+      const cleanupString = jest.fn<void, [string, TestEntity]>();
+
+      const world = makeWorldBuilder(():TestEntity => ENTITY_1)
+        .addComponent("cleanupNumber", cleanupNumber)
+        .addComponent("cleanupString", cleanupString)
+        .world();
+
+      const entity = world.createEntity();
+      world.addComponent(entity, "cleanupNumber", 343);
+      world.addComponent(entity, "cleanupString", "Hello");
+
+      expect(cleanupNumber).not.toHaveBeenCalled();
+      expect(cleanupString).not.toHaveBeenCalled();
+
+      world.removeAllComponents(entity);
+      expect(cleanupNumber).toHaveBeenCalledWith(343, entity);
+      expect(cleanupString).toHaveBeenCalledWith("Hello", entity);
+    });
+    it('runs component cleanup on removeEntity', () => {
+      const cleanupNumber = jest.fn<void, [number, TestEntity]>();
+      const cleanupString = jest.fn<void, [string, TestEntity]>();
+
+      const world = makeWorldBuilder(():TestEntity => ENTITY_1)
+        .addComponent("cleanupNumber", cleanupNumber)
+        .addComponent("cleanupString", cleanupString)
+        .world();
+
+      const entity = world.createEntity();
+      world.addComponent(entity, "cleanupNumber", 343);
+      world.addComponent(entity, "cleanupString", "Hello");
+
+      expect(cleanupNumber).not.toHaveBeenCalled();
+      expect(cleanupString).not.toHaveBeenCalled();
+      
+      world.removeEntity(entity);
+
+      expect(cleanupNumber).toHaveBeenCalledWith(343, entity);
+      expect(cleanupString).toHaveBeenCalledWith("Hello", entity);
+    });
+    it('runs component cleanup on removeAllEntities', () => {
+      const cleanupNumber = jest.fn<void, [number, TestEntity]>();
+      const cleanupString = jest.fn<void, [string, TestEntity]>();
+
+      const world = makeWorldBuilder(():TestEntity => ENTITY_1)
+        .addComponent("cleanupNumber", cleanupNumber)
+        .addComponent("cleanupString", cleanupString)
+        .world();
+
+      const entity = world.createEntity();
+      world.addComponent(entity, "cleanupNumber", 343);
+      world.addComponent(entity, "cleanupString", "Hello");
+
+      expect(cleanupNumber).not.toHaveBeenCalled();
+      expect(cleanupString).not.toHaveBeenCalled();
+      
+      world.removeAllEntities();
+
+      expect(cleanupNumber).toHaveBeenCalledWith(343, entity);
+      expect(cleanupString).toHaveBeenCalledWith("Hello", entity);    
+    });
+  });
+
   describe('Bundle', () => {
     it('uses a bundler to add components', () => {
       const makeEntity = jest.fn<TestEntity, []>().mockReturnValue(ENTITY_1);
