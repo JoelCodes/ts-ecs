@@ -1,7 +1,7 @@
 import { makeWorldBuilder, wrapSystems } from "@ts-ecs/core";
-import { cleanupBall, cleanupBalls, makeBallBundler, updateBalls, type BallComponent } from "./balls";
+import { cleanupCircle, cleanupCircles, makeCircleBundler, updateCircles, type CircleComponent } from "./circles";
 import { updateTime } from "../utils";
-import { onCleanup } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 
 
 export function Circles(){
@@ -12,36 +12,36 @@ export function Circles(){
     .addResource("time", {now:performance.now(), elapsed:0})
     .addResource("count", 0)
     .addResource("running", true)
-    .addComponent("ball", (ball:BallComponent) => {
-      cleanupBall(ball);
+    .addComponent("circle", (circle:CircleComponent) => {
+      cleanupCircle(circle);
       world.updateResource('count', n => n - 1);
     })
     .world();
-  type BallWorld = typeof world;
+  type CircleWorld = typeof world;
 
   const systems = wrapSystems(world);
 
   systems.addSystem('update:timer', updateTime);
-  systems.addSystem('update:balls', updateBalls);
-  systems.addSystem('cleanup:balls', cleanupBalls);
+  systems.addSystem('update:circles', updateCircles);
+  systems.addSystem('cleanup:circles', cleanupCircles);
   systems.addSystem('request:loop', (world) => {
     if(world.getResource('running')){
       requestAnimationFrame(() => systems.runStage("loop"));
     }
   });
-  systems.combineStages("loop", ["update:timer", "update:balls", "cleanup:balls", "request:loop"]);
+  systems.combineStages("loop", ["update:timer", "update:circles", "cleanup:circles", "request:loop"]);
 
-  const ballGroup = <g></g> as SVGGElement;
+  const circleGroup = <g></g> as SVGGElement;
 
   const makeCircleElement = (cx:number, cy:number) => {
     const circle = <circle cx={cx} cy={cy} r='25' fill='red'/> as SVGCircleElement;
-    ballGroup.appendChild(circle);
+    circleGroup.appendChild(circle);
     return circle;
   }
 
-  const ballBundler = makeBallBundler(makeCircleElement);
-  const fullBundler = (entity: number, world:BallWorld, cx:number, cy:number) => {
-    ballBundler(entity, world, cx, cy);
+  const circleBundler = makeCircleBundler(makeCircleElement);
+  const fullBundler = (entity: number, world:CircleWorld, cx:number, cy:number) => {
+    circleBundler(entity, world, cx, cy);
     world.updateResource('count', n => n + 1)
   }
   
@@ -60,8 +60,11 @@ export function Circles(){
     world.removeAllEntities();
   });
 
-  systems.runStage("loop")
+  onMount(() => {
+    systems.runStage("loop");
+  }); 
+
   return <svg on:click={onClick} viewBox="-250 -150 500 300" style="background-color: #eee;">
-    {ballGroup}
+    {circleGroup}
   </svg>
 }

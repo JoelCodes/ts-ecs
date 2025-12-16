@@ -1,5 +1,5 @@
 {
-  "projectName": "demos2",
+  "projectName": "demos",
   "mode": "file-router",
   "typescript": true,
   "tailwind": true,
