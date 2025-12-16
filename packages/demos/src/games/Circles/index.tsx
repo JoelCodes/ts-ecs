@@ -10,7 +10,7 @@ export function Circles(){
 
   const world = makeWorldBuilder(makeId)
     .addResource("time", {now:performance.now(), elapsed:0})
-    .addResource("count", 0)
+    .addResource("count", 0, (n) => { countText.innerHTML = `${n}`; })
     .addResource("running", true)
     .addComponent("circle", (circle:CircleComponent) => {
       cleanupCircle(circle);
@@ -32,6 +32,7 @@ export function Circles(){
   systems.combineStages("loop", ["update:timer", "update:circles", "cleanup:circles", "request:loop"]);
 
   const circleGroup = <g></g> as SVGGElement;
+  const countText = <text text-anchor="middle" fill='blue' font-size="100">0</text> as SVGTextElement
 
   const makeCircleElement = (cx:number, cy:number) => {
     const circle = <circle cx={cx} cy={cy} r='25' fill='red'/> as SVGCircleElement;
@@ -66,5 +67,6 @@ export function Circles(){
 
   return <svg on:click={onClick} viewBox="-250 -150 500 300" style="background-color: #eee;">
     {circleGroup}
+    {countText}
   </svg>
 }

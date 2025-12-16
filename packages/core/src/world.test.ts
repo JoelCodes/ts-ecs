@@ -34,6 +34,29 @@ describe('makeWorldBuilder', () => {
     expect(world.getComponents(ENTITY_1)).toEqual({position: [1, 2], flagged: true});
   });
 
+  describe('Resource OnChange', () => {
+    it('captures when resources change', () => {
+      const onCountChange = jest.fn<void, [number, number?]>()
+      const onTimeChange = jest.fn()
+      const world = makeWorldBuilder(() => ENTITY_1 as TestEntity)
+        .addResource<'count', number>('count', 1, onCountChange)
+        .addResource('time', {last:40, delta:0}, onTimeChange)
+        .world()
+
+      expect(onCountChange).not.toHaveBeenCalled();
+      world.setResource("count", 5)
+      expect(onCountChange).toHaveBeenCalledWith(5, 1);
+      world.updateResource("count", n => n + 1);
+      expect(onCountChange).toHaveBeenCalledWith(6, 5);
+
+      world.mutateResource("time", (time) => {
+        time.last += 30;
+        time.delta += 30;
+      })
+      expect(onTimeChange).toHaveBeenCalledWith({last: 70, delta: 30});
+    })
+  })
+
   describe('Cleanup', () => {
     it('runs component cleanup on removeComponent', () => {
       const cleanup = jest.fn<void, [number, TestEntity]>();
