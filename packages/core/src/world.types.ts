@@ -24,7 +24,7 @@ export type WorldBuilder<Entity, Components extends Record<string, any>, Resourc
       Resources,
       Flags
       >;
-  addResource<ResourceName extends string, ResourceType>(name:ResourceName, value:ResourceType):
+  addResource<ResourceName extends string, ResourceType>(name:ResourceName, value:ResourceType, onChange?:(currentValue:ResourceType, oldValue?:ResourceType) => void):
     WorldBuilder<
       Entity, 
       Components, 

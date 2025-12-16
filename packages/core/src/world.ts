@@ -13,12 +13,13 @@ export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<E
       components:{[K in keyof Components]:Map<Entity, Components[K]>},
       resources:Resources,
       flags:{[K in Flags]:Set<Entity>},
-      componentCleanups:{[K in keyof Components]?:(component:Components[K]) => void}
+      componentCleanups:{[K in keyof Components]?:(component:Components[K]) => void},
+      resourceChangeHandlers:{[K in keyof Resources]?:(currentValue:Resources[K], oldValue?:Resources[K]) => void},
     ):World<Entity, Components, Resources, Flags>{
   
     const entityManager = makeEntityManager(makeEntity);
     const componentManager = makeComponentManager(components, flags, componentCleanups);
-    const resourcesManager = makeResourcesManager(resources);
+    const resourcesManager = makeResourcesManager(resources, resourceChangeHandlers);
 
     function *removeEntity(entity:Entity):Iterable<[Entity, Partial<Components>]>{
       for(const removedEntity of entityManager.removeEntity(entity)){
@@ -68,19 +69,24 @@ export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<E
       componentMaps:{[K in keyof Components]:Map<Entity, Components[K]>}, 
       resources:Resources,
       flagSets:{[K in Flags]:Set<Entity>},
-      componentCleanups: {[K in keyof Components]?: (component:Components[K]) => void}
+      componentCleanups: {[K in keyof Components]?: (component:Components[K]) => void},
+      resourceChangeHandlers:{[K in keyof Resources]?:(currentValue:Resources[K], oldValue?:Resources[K]) => void},
     ):WorldBuilder<Entity, Components, Resources, Flags>{
     return {
-      addResource<ResourceName extends string, ResourceType>(name:ResourceName, value:ResourceType) {
+      addResource<ResourceName extends string, ResourceType>(name:ResourceName, value:ResourceType, onChange?:(currentValue:ResourceType, oldValue?:ResourceType) => void) {
         type NewResources = Resources & Record<ResourceName, ResourceType>
-        return makeWorldBuilderInner<Components, NewResources, Flags>(componentMaps, {...resources, [name]:value} as NewResources, flagSets, componentCleanups);
+        const newResourceChangeHandlers = typeof onChange === 'function' ? {
+          ...resourceChangeHandlers,
+          [name]: onChange
+        } : resourceChangeHandlers
+        return makeWorldBuilderInner<Components, NewResources, Flags>(componentMaps, {...resources, [name]:value} as NewResources, flagSets, componentCleanups, newResourceChangeHandlers);
       },
       addComponent<ComponentName extends string, ComponentType>(name:ComponentName, cleanup?:(component:ComponentType, entity:Entity) => void) {
         type NewComponents = Components & Record<ComponentName, ComponentType>;
         if(name in componentMaps || name in flagSets) throw new Error('Name Taken');
 
         const newCleanups = typeof cleanup === 'function' ? {...componentCleanups, [name]:cleanup} : componentCleanups;
-        return makeWorldBuilderInner<NewComponents, Resources, Flags>({...componentMaps, [name]:new Map<Entity, ComponentType>()}, resources, flagSets, newCleanups) as ComponentName extends Flags | keyof Components ? never :
+        return makeWorldBuilderInner<NewComponents, Resources, Flags>({...componentMaps, [name]:new Map<Entity, ComponentType>()}, resources, flagSets, newCleanups, resourceChangeHandlers) as ComponentName extends Flags | keyof Components ? never :
         WorldBuilder<
           Entity, 
           {[K in (keyof Components)|ComponentName]:
@@ -96,7 +102,7 @@ export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<E
         return makeWorldBuilderInner<Components, Resources, NewFlags>(componentMaps, resources, {
           ...flagSets,
           [name]: new Set<Entity>()
-        } as {[K in NewFlags]:Set<Entity>}, componentCleanups) as FlagName extends Flags | keyof Components ? never :
+        } as {[K in NewFlags]:Set<Entity>}, componentCleanups, resourceChangeHandlers) as FlagName extends Flags | keyof Components ? never :
           WorldBuilder<
             Entity,
             Components,
@@ -104,9 +110,9 @@ export function makeWorldBuilder<Entity>(makeEntity:() => Entity):WorldBuilder<E
             Flags | FlagName
           >
       },
-      world: () => makeWorld<Components, Resources, Flags>(componentMaps, resources, flagSets, componentCleanups),
+      world: () => makeWorld<Components, Resources, Flags>(componentMaps, resources, flagSets, componentCleanups, resourceChangeHandlers),
     }
   }
 
-  return makeWorldBuilderInner({}, {}, {}, {});
+  return makeWorldBuilderInner({}, {}, {}, {}, {});
 }
