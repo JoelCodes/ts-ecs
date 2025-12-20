@@ -7,16 +7,16 @@ export type CircleComponent = {
   element:SVGElement
 };
 
-type CircleWorld<Entity = any> = World<Entity, {circle:CircleComponent}, {time:{now:number, elapsed:number}}, never>;
+type CircleWorld<Entity = any> = World<Entity, {circle:CircleComponent}, {time:{now:number, elapsed:number}, circleGroup:SVGElement}, never>;
 
-export const makeCircleBundler = (elementCreator:(cx:number, cy:number) => SVGElement) => 
-  <Entity>(entity:Entity, world:Pick<CircleWorld<Entity>, 'addComponent'| 'updateResource'>, cx:number, cy:number) => {
-    world.addComponent(entity, 'circle', {
-      center: [cx, cy],
-      timeRemaining: 5000,
-      element:elementCreator(cx, cy)
-    });
-  }
+export const circleBundler = <Entity>(entity:Entity, world:CircleWorld<Entity>, cx:number, cy:number, element:SVGElement) => {
+  world.addComponent(entity, 'circle', {
+    center: [cx, cy],
+    timeRemaining: 5000,
+    element,
+  });
+  world.getResource('circleGroup').appendChild(element);
+}
 
 export function updateCircles(world:CircleWorld){
   const {elapsed} = world.getResource("time");
@@ -26,8 +26,12 @@ export function updateCircles(world:CircleWorld){
     });
   }
 }
-const isCircleDead = (circle:CircleComponent) => circle.timeRemaining <= 0
-const isCircleDeadQuery = {required: { circle: isCircleDead}};
+
+const isCircleDeadQuery = { 
+  required: { 
+    circle: (circle:CircleComponent) => circle.timeRemaining <= 0 
+  } 
+};
 
 export const cleanupCircle = (circle:CircleComponent) => {
   circle.element.remove();
