@@ -9,8 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as CirclesRouteImport } from './routes/circles'
+import { Route as ChaserRouteImport } from './routes/chaser'
 import { Route as IndexRouteImport } from './routes/index'
 
+const CirclesRoute = CirclesRouteImport.update({
+  id: '/circles',
+  path: '/circles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChaserRoute = ChaserRouteImport.update({
+  id: '/chaser',
+  path: '/chaser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +31,50 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chaser': typeof ChaserRoute
+  '/circles': typeof CirclesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chaser': typeof ChaserRoute
+  '/circles': typeof CirclesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chaser': typeof ChaserRoute
+  '/circles': typeof CirclesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/chaser' | '/circles'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/chaser' | '/circles'
+  id: '__root__' | '/' | '/chaser' | '/circles'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChaserRoute: typeof ChaserRoute
+  CirclesRoute: typeof CirclesRoute
 }
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/circles': {
+      id: '/circles'
+      path: '/circles'
+      fullPath: '/circles'
+      preLoaderRoute: typeof CirclesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chaser': {
+      id: '/chaser'
+      path: '/chaser'
+      fullPath: '/chaser'
+      preLoaderRoute: typeof ChaserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +87,8 @@ declare module '@tanstack/solid-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChaserRoute: ChaserRoute,
+  CirclesRoute: CirclesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
