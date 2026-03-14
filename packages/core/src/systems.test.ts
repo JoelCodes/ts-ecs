@@ -1,41 +1,32 @@
-import { wrapSystems } from "./systems";
+import { makeStageHandlerSet, makeSystemManager } from "./systems";
 
-describe("wrapSystems", () => {
-  it('allows adding and removing systems', () => {
-    const onRender = jest.fn<void, [number]>();
-    const onUpdate1 = jest.fn<void, [number]>();
-    const onUpdate2 = jest.fn<void, [number]>();
+type TestWorld = {
+  running?: boolean
+};
 
-    const systems = wrapSystems(4);
-    const onRenderUnSub = systems.addSystem('render', onRender);
-    const onUpdate1UnSub = systems.addSystem('update', onUpdate1);
-    systems.addSystem('update', onUpdate2);
+type Stages = "SETUP"|"UPDATE"|"RENDER"|"CLEANUP";
 
-    expect(onRender).not.toHaveBeenCalled();
-    systems.runStage('render');
-    expect(onRender).toHaveBeenCalledTimes(1);
-    expect(onRender).toHaveBeenCalledWith(4);
+const systemManager =  makeSystemManager<TestWorld, Stages>(
+  {
+    CLEANUP: makeStageHandlerSet<TestWorld>(),
+    SETUP: makeStageHandlerSet<TestWorld>(),
+    UPDATE: makeStageHandlerSet<TestWorld>(),
+    RENDER: makeStageHandlerSet<TestWorld>(),
+  }
+)
 
-    onRender.mockClear();
-    onRenderUnSub();
-    systems.runStage('render');
-    expect(onRender).not.toHaveBeenCalled();
-
-
-    expect(onUpdate1).not.toHaveBeenCalled();
-    expect(onUpdate2).not.toHaveBeenCalled();
-
-    systems.runStage('update');
-    expect(onUpdate1).toHaveBeenCalledTimes(1);
-    expect(onUpdate1).toHaveBeenCalledWith(4);
-
-    expect(onUpdate2).toHaveBeenCalledTimes(1);
-    expect(onUpdate2).toHaveBeenCalledWith(4);
-
-    onUpdate1UnSub();
-    systems.runStage('update');
-    expect(onUpdate2).toHaveBeenCalledTimes(2);
-    expect(onUpdate2).toHaveBeenLastCalledWith(4);
-    expect(onUpdate1).toHaveBeenCalledTimes(1);
+systemManager.post('SETUP', (world, schedule) => {
+  schedule(() => systemManager.runStage('RENDER', world));
+});
+systemManager.post('UPDATE', (world, schedule) => {
+  schedule(() => systemManager.runStage('RENDER', world));
+});
+systemManager.post('RENDER', (world, schedule) => {
+  schedule(() => {
+    if(world.running){
+      process.nextTick(() => systemManager.runStage('UPDATE', world));
+    } else {
+      schedule(() => systemManager.runStage('CLEANUP', world));
+    }
   })
 })
