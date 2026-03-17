@@ -1,6 +1,18 @@
-export type SystemMethods<World> = {
-  addSystem(stage:string, handler:(world:World) => void):() => void;
-  combineStages(stage:string, stages:string[]):() => void;
-  runStage(stage:string):void;
-  hasStage(stage:string):boolean;
+export type SystemHandler<World> = (
+  world:World, 
+  schedule:(fn:() => void) => void,
+) => void
+
+export type SystemMethods<World, Stages extends string> = {
+  runStage<Stage extends Stages>(stage:Stage):void;
+  on<Stage extends Stages>(stage:Stage, handler:SystemHandler<World>):() => void;
+  pre<Stage extends Stages>(stage:Stage, handler:SystemHandler<World>):() => void;
+  post<Stage extends Stages>(stage:Stage, handler:SystemHandler<World>):() => void;
+  clearStage<Stage extends Stages>(stage:Stage):void;
+  clearAllStages():void;
+}
+
+export type SystemsBuilder<World, Stages extends string> = {
+  addStage<NewStage extends string>(newStage:NewStage):SystemsBuilder<World, Stages | NewStage>;
+  systems():SystemMethods<World, Stages>;
 }

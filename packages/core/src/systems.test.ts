@@ -1,41 +1,109 @@
-import { wrapSystems } from "./systems";
+import { makeSystemsBuilder } from "./systems"
 
-describe("wrapSystems", () => {
-  it('allows adding and removing systems', () => {
-    const onRender = jest.fn<void, [number]>();
-    const onUpdate1 = jest.fn<void, [number]>();
-    const onUpdate2 = jest.fn<void, [number]>();
+describe('SystemsBuilder', () => {
+  it('Creates System Methods', () => {
+    const world = {};
+    const handler = jest.fn();
 
-    const systems = wrapSystems(4);
-    const onRenderUnSub = systems.addSystem('render', onRender);
-    const onUpdate1UnSub = systems.addSystem('update', onUpdate1);
-    systems.addSystem('update', onUpdate2);
+    const systems = makeSystemsBuilder(world)
+      .addStage('stage')
+      .systems();
+    
+    systems.post('stage', (world) => handler('post', world));
+    systems.on('stage', (world) => handler('on', world));
+    systems.pre('stage', (world) => handler('pre', world));
 
-    expect(onRender).not.toHaveBeenCalled();
-    systems.runStage('render');
-    expect(onRender).toHaveBeenCalledTimes(1);
-    expect(onRender).toHaveBeenCalledWith(4);
+    expect(handler).not.toHaveBeenCalled();
+    systems.runStage('stage');
 
-    onRender.mockClear();
-    onRenderUnSub();
-    systems.runStage('render');
-    expect(onRender).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(3);
+    expect(handler.mock.calls).toEqual([['pre', world], ['on', world], ['post', world]]);
+  });
 
+  it('allows scheduling for post', () => {
+    const world = {};
+    const calls:string[] = [];
+    const makeHandler = (label:string) => (_:any, schedule:(fn:() => void) => void) => {
+      calls.push(label);
+      schedule(() => calls.push(`scheduled:${label}`));
+    }
 
-    expect(onUpdate1).not.toHaveBeenCalled();
-    expect(onUpdate2).not.toHaveBeenCalled();
+    const systems = makeSystemsBuilder(world)
+      .addStage('stage')
+      .systems();
 
-    systems.runStage('update');
-    expect(onUpdate1).toHaveBeenCalledTimes(1);
-    expect(onUpdate1).toHaveBeenCalledWith(4);
+    systems.post('stage', makeHandler('post'));
+    systems.on('stage', makeHandler('on'));
+    systems.pre('stage', makeHandler('pre'));
 
-    expect(onUpdate2).toHaveBeenCalledTimes(1);
-    expect(onUpdate2).toHaveBeenCalledWith(4);
+    expect(calls).toEqual([])
+    systems.runStage('stage');
+    expect(calls.join('|')).toEqual('pre|on|post|scheduled:pre|scheduled:on|scheduled:post');
+  });
+  describe('error handling', () => {
 
-    onUpdate1UnSub();
-    systems.runStage('update');
-    expect(onUpdate2).toHaveBeenCalledTimes(2);
-    expect(onUpdate2).toHaveBeenLastCalledWith(4);
-    expect(onUpdate1).toHaveBeenCalledTimes(1);
-  })
-})
+    it('crashes on error in pre', () => {
+      const calls:string[] = [];
+      const systems = makeSystemsBuilder(null)
+      .addStage('stage')
+      .systems();
+      const error = new Error('!');
+      systems.pre('stage', (_, schedule) => {
+        calls.push('pre');
+        schedule(() => calls.push('scheduled'));
+        throw error;
+      });
+      systems.on('stage', () => calls.push('on'));
+      systems.post('stage', () => calls.push('post'));
+
+      expect(calls).toEqual([]);
+      expect(() => { systems.runStage('stage'); }).toThrow(error);
+      expect(calls).toEqual(['pre']);
+    });
+    it('crashes on error in "on"', () => {
+      const calls:string[] = [];
+      const systems = makeSystemsBuilder(null)
+      .addStage('stage')
+      .systems();
+      const error = new Error('!');
+      systems.pre('stage', (_, schedule) => {
+        calls.push('pre');
+        schedule(() => calls.push('scheduled:pre'));
+      });
+      systems.on('stage', (_, schedule) => {
+        calls.push('on');
+        schedule(() => calls.push('on'));
+        throw error;
+      });
+      systems.post('stage', () => calls.push('post'));
+
+      expect(calls).toEqual([]);
+      expect(() => { systems.runStage('stage'); }).toThrow(error);
+      expect(calls).toEqual(['pre', 'on']);
+    });
+    it('crashes on error in "post"', () => {
+      const calls:string[] = [];
+      const systems = makeSystemsBuilder(null)
+      .addStage('stage')
+      .systems();
+      const error = new Error('!');
+      systems.pre('stage', (_, schedule) => {
+        calls.push('pre');
+        schedule(() => calls.push('scheduled:pre'));
+      });
+      systems.on('stage', (_, schedule) => {
+        calls.push('on');
+        schedule(() => calls.push('scheduled:on'));
+      });
+      systems.post('stage', (_, schedule) => {
+        calls.push('post');
+        schedule(() => calls.push('scheduled:post'));
+        throw error;
+      });
+
+      expect(calls).toEqual([]);
+      expect(() => { systems.runStage('stage'); }).toThrow(error);
+      expect(calls).toEqual(['pre', 'on', 'post']);
+    });
+  });
+});
