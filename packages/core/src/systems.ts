@@ -68,17 +68,15 @@ export function makeStageHandlerSet<World>():StageHandlerSet<World>{
   }
 }
 
-export function makeSystemsBuilder<World, Stages extends string = never>(world:World, stageHandlers:Record<Stages, StageHandlerSet<World>>):SystemsBuilder<World, Stages>{
-  return {
-    addStage<NewStage extends string>(newStage:NewStage) {
-      return makeSystemsBuilder<World, Stages | NewStage>(
-        world, {
+export function makeSystemsBuilder<World>(world:World):SystemsBuilder<World, never>{
+  const internalSystemsBuilder = <Stages extends string>(stageHandlers:Record<Stages, StageHandlerSet<World>>):SystemsBuilder<World, Stages> => ({
+    addStage<NewStage extends string>(newStage:NewStage){
+      return internalSystemsBuilder<Stages | NewStage>({
         ...stageHandlers,
-        [newStage]: makeStageHandlerSet<World>()
+        [newStage]:makeStageHandlerSet<World>()
       } as Record<Stages | NewStage, StageHandlerSet<World>>);
     },
-    systems() {
-      return makeSystemManager(world, stageHandlers);
-    },
-  }
+    systems(){ return makeSystemManager(world, stageHandlers); }
+  })
+  return internalSystemsBuilder<never>({});
 }
